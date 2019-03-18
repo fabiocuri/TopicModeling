@@ -483,33 +483,7 @@ def build_HLDA_data(file_name):
 
     return new_corpus, vocab
 
-def show_doc(d=0):
-    
-    node = hlda.document_leaves[d]
-    path = []
-    while node is not None:
-        path.append(node)
-        node = node.parent
-    path.reverse()   
-    
-    n_words = 10
-    with_weights = False  
-    l1, l2, l3 = [], [], []
-    for n in range(len(path)):
-        node = path[n]
-        msg = 'Level %d Topic %d: ' % (node.level, node.node_id)
-        msg += node.get_top_words(n_words, with_weights)
-        
-        if n==0:
-            l1.append(node.get_top_words(n_words, with_weights))
-        if n==1:
-            l2.append(node.get_top_words(n_words, with_weights))
-        if n==2:
-            l3.append(node.get_top_words(n_words, with_weights))
-            
-    return l1, l2, l3
-
-def show_doc(d=0):
+def show_doc(d, hlda):
     
     node = hlda.document_leaves[d]
     path = []
@@ -538,20 +512,43 @@ def show_doc(d=0):
 def save_zipped_pickle(obj, filename, protocol=-1):
     with gzip.open(filename, 'wb') as f:
         cPickle.dump(obj, f, protocol)
-
-corpus, vocab = build_HLDA_data('unknown.txt')
-
-n_samples = 100  # no of iterations for the sampler
-alpha = 10.0  # smoothing over level distributions
-gamma = 1.0  # CRP smoothing parameter; number of imaginary customers at next, as yet unused table
-eta = 0.1  # smoothing over topic-word distributions
-num_levels = 3  # the number of levels in the tree
-display_topics = 100  # the number of iterations between printing a brief summary of the topics so far
-n_words = 10  # the number of most probable words to print for each topic after model estimation
-with_weights = False  # whether to print the words with the weights
-
-hlda = HierarchicalLDA(corpus, vocab, alpha=alpha, gamma=gamma, eta=eta,
-                                 num_levels=num_levels)
-hlda.estimate(n_samples, display_topics=display_topics, n_words=n_words, with_weights=with_weights)
         
-save_zipped_pickle(hlda, 'model.p')
+def load_zipped_pickle(filename):
+    with gzip.open(filename, 'rb') as f:
+        loaded_object = cPickle.load(f)
+        return loaded_object
+    
+def export_topics(model, corpus):
+
+    l1, l2, l3 = [], [], []
+    for x in range(len(corpus)):
+        l1_, l2_, l3_ = show_doc(x, model)
+        l1.append(l1_)
+        l2.append(l2_)
+        l3.append(l3_)
+
+    df = pd.DataFrame()
+    df['keywords_l4'] = l2
+    df.to_csv(cwd + '/data/unknown_TM.csv', encoding='utf-8', index = False)
+    
+   
+if '__main__' == __name__:
+    
+    corpus, vocab = build_HLDA_data('unknown.txt')
+
+    n_samples = 100  # no of iterations for the sampler
+    alpha = 10.0  # smoothing over level distributions
+    gamma = 1.0  # CRP smoothing parameter; number of imaginary customers at next, as yet unused table
+    eta = 0.1  # smoothing over topic-word distributions
+    num_levels = 3  # the number of levels in the tree
+    display_topics = 100  # the number of iterations between printing a brief summary of the topics so far
+    n_words = 10  # the number of most probable words to print for each topic after model estimation
+    with_weights = False  # whether to print the words with the weights
+
+    hlda = HierarchicalLDA(corpus, vocab, alpha=alpha, gamma=gamma, eta=eta,
+                                     num_levels=num_levels)
+    hlda.estimate(n_samples, display_topics=display_topics, n_words=n_words, with_weights=with_weights)
+    
+    save_zipped_pickle(hlda, 'unknown.p')
+    model = load_zipped_pickle('unknown.p')
+    export_topics(model, corpus)
