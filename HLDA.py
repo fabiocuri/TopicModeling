@@ -462,7 +462,7 @@ def build_HLDA_data(file_name):
     # Filter vocabulary
 
     # 1st simulation: 5% of filtering !
-    data = filter_vocabulary(data, 0.1)
+    data = filter_vocabulary(data, 0.05)
     
     data = [x.split(' ') for x in data]
     data_ = list(itertools.chain(*data))
@@ -483,7 +483,7 @@ def build_HLDA_data(file_name):
 
     return new_corpus, vocab
 
-def show_doc(d, hlda):
+def get_results(d, hlda):
     
     node = hlda.document_leaves[d]
     path = []
@@ -494,20 +494,23 @@ def show_doc(d, hlda):
     
     n_words = 10
     with_weights = False  
-    l1, l2, l3 = [], [], []
+    f1, f2, f3, l1, l2, l3 = [], [], [], [], [], []
     for n in range(len(path)):
         node = path[n]
         msg = 'Level %d Topic %d: ' % (node.level, node.node_id)
         msg += node.get_top_words(n_words, with_weights)
         
         if n==0:
+            f1.append(node.customers)
             l1.append(node.get_top_words(n_words, with_weights))
         if n==1:
+            f2.append(node.customers)
             l2.append(node.get_top_words(n_words, with_weights))
         if n==2:
+            f3.append(node.customers)
             l3.append(node.get_top_words(n_words, with_weights))
             
-    return l1, l2, l3
+    return f1, f2, f3, l1, l2, l3
 
 def save_zipped_pickle(obj, filename, protocol=-1):
     with gzip.open(filename, 'wb') as f:
@@ -520,28 +523,37 @@ def load_zipped_pickle(filename):
     
 def export_topics(model, corpus):
 
-    l1, l2, l3 = [], [], []
+    f1, f2, f3, l1, l2, l3 = [], [], [], [], [], []
     for x in range(len(corpus)):
-        l1_, l2_, l3_ = show_doc(x, model)
-        l1.append(l1_)
-        l2.append(l2_)
-        l3.append(l3_)
+        f1_, f2_, f3_, l1_, l2_, l3_ = get_results(x, model)
+        l1.append((l1_))
+        f1.append((f1_[0]))
+        l2.append((l2_))
+        f2.append((f2_[0]))
+        l3.append((l3_))
+        f3.append((f3_[0]))
 
     df = pd.DataFrame()
+
+    df['keywords_l3'] = l1
+    df['frequency_l3'] = f1
     df['keywords_l4'] = l2
+    df['frequency_l4'] = f2
+    df['keywords_l5'] = l3
+    df['frequency_l5'] = f3
+
     df.to_csv(cwd + '/data/unknown_TM.csv', encoding='utf-8', index = False)
-    
-   
+
 if '__main__' == __name__:
     
     corpus, vocab = build_HLDA_data('unknown.txt')
 
-    n_samples = 100  # no of iterations for the sampler
+    n_samples = 1  # no of iterations for the sampler
     alpha = 10.0  # smoothing over level distributions
     gamma = 1.0  # CRP smoothing parameter; number of imaginary customers at next, as yet unused table
     eta = 0.1  # smoothing over topic-word distributions
     num_levels = 3  # the number of levels in the tree
-    display_topics = 100  # the number of iterations between printing a brief summary of the topics so far
+    display_topics = 1  # the number of iterations between printing a brief summary of the topics so far
     n_words = 10  # the number of most probable words to print for each topic after model estimation
     with_weights = False  # whether to print the words with the weights
 
